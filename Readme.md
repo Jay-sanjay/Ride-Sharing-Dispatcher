@@ -33,10 +33,10 @@ Please Refer the individual folders for detailed explanations of each version’
 ![Matching Accuracy Comparison](plots/accuracy_analysis.png)
 *Figure 2: Matching accuracy (%) vs. problem size for all versions*
 
-> **Note**: v2 accuracy is artificially high in this table because the tested N values are small enough that cell capacity was not exceeded. For 10M, v2 drops to ~51%.
+> **Note**: v2 accuracy is looking low because the riders are assigned drives from only it's own cell. So, if the number of riders are more than the number of drivers in a cell the extra riders fails to secure a Ride. For 10M, v2 drops to ~51%.
 
 
 ---
 
 ## Conclusion
-Starting from a brute‑force O(N²) baseline, we progressively introduced spatial partitioning, bounded radius expansion, perimeter‑only scanning, fallback global search, and coalesced data layout. The final version (v5) achieves **100% matching accuracy** on 10 million agents in **just 15 seconds** – a **15× speedup** over the naive implementation. This demonstrates how careful algorithmic and memory optimisations can make GPU‑accelerated dispatch feasible at massive scales.
+Starting from a brute‑force O(N²) baseline, we progressively introduced spatial partitioning, bounded radius expansion, perimeter‑only scanning, fallback global search, and coalesced data layout. The final version (v5) achieves **100% matching accuracy** on 10 million agents in **just 15 seconds** – a **15× speedup** over the naive implementation.
