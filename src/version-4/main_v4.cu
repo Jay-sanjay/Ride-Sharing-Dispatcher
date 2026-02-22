@@ -349,8 +349,6 @@
              d_rx, d_ry, d_dx, d_dy, d_info, d_res, d_failed_indices, failed_count);
          CHECK(cudaDeviceSynchronize());
  
-         // Copy updated results for those riders
-         // We need to copy only the failed ones? Simpler: copy all results again.
          CHECK(cudaMemcpy(h_results, d_res, NUM_RIDERS * sizeof(int),
                           cudaMemcpyDeviceToHost));
      }
