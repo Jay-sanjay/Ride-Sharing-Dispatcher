@@ -267,29 +267,6 @@
  }
  
  //------------------------------------------------------------------------------
- // Host function to compact failed rider indices
- //------------------------------------------------------------------------------
- int compact_failed(int *h_results, int *d_failed_indices, int num_riders)
- {
-     int *h_failed = (int *)malloc(num_riders * sizeof(int));
-     int count = 0;
-     for (int i = 0; i < num_riders; ++i)
-     {
-         if (h_results[i] == -1)
-         {
-             h_failed[count++] = i;
-         }
-     }
-     if (count > 0)
-     {
-         CHECK(cudaMemcpy(d_failed_indices, h_failed, count * sizeof(int),
-                          cudaMemcpyHostToDevice));
-     }
-     free(h_failed);
-     return count;
- }
- 
- //------------------------------------------------------------------------------
  // Main
  //------------------------------------------------------------------------------
  int main()
@@ -350,14 +327,12 @@
  
      // Step 1: Build spatial grid with coordinates
      printf("Building spatial grid (storing coordinates directly)...\n");
-     spatial_grid_partitioning_kernel<<<driver_blocks, threads>>>(
-         d_dx, d_dy, d_grid_count, d_grid_driver_id, d_grid_driver_x, d_grid_driver_y);
+     spatial_grid_partitioning_kernel<<<driver_blocks, threads>>>(d_dx, d_dy, d_grid_count, d_grid_driver_id, d_grid_driver_x, d_grid_driver_y);
      CHECK(cudaDeviceSynchronize());
  
      // Step 2: Main matching with radius expansion (MAX_RADIUS=2)
      printf("Running radius‑limited matching (MAX_RADIUS=%d)...\n", MAX_RADIUS);
-     ride_sharing_kernel<<<rider_blocks, threads>>>(
-         d_rx, d_ry, d_info, d_res, d_grid_count, d_grid_driver_id, d_grid_driver_x, d_grid_driver_y);
+     ride_sharing_kernel<<<rider_blocks, threads>>>(d_rx, d_ry, d_info, d_res, d_grid_count, d_grid_driver_id, d_grid_driver_x, d_grid_driver_y);
      CHECK(cudaDeviceSynchronize());
  
      // Copy results back to host
@@ -371,8 +346,7 @@
              matched++;
      }
      double match_percent = 100.0 * matched / NUM_RIDERS;
-     printf("After radius search: %.6f %% matched, %.6f %% failed\n",
-            match_percent, 100.0 - match_percent);
+     printf("After radius search: %.6f %% matched, %.6f %% failed\n",match_percent, 100.0 - match_percent);
  
      // Step 3: Fallback global search for failed riders
      int failed_count = NUM_RIDERS - matched;
@@ -386,18 +360,17 @@
              if (h_results[i] == -1)
                  h_failed[idx++] = i;
          }
-         CHECK(cudaMemcpy(d_failed_indices, h_failed, failed_count * sizeof(int),
-                          cudaMemcpyHostToDevice));
+         CHECK(cudaMemcpy(d_failed_indices, h_failed, failed_count * sizeof(int),cudaMemcpyHostToDevice));
          free(h_failed);
  
          int fallback_blocks = (failed_count + threads - 1) / threads;
-         fallback_global_kernel<<<fallback_blocks, threads>>>(
-             d_rx, d_ry, d_dx, d_dy, d_info, d_res, d_failed_indices, failed_count);
+         fallback_global_kernel<<<fallback_blocks, threads>>>(d_rx, d_ry, d_dx, d_dy, d_info, d_res, d_failed_indices, failed_count);
          CHECK(cudaDeviceSynchronize());
  
          // Copy updated results for all riders (simpler than partial update)
          CHECK(cudaMemcpy(h_results, d_res, NUM_RIDERS * sizeof(int), cudaMemcpyDeviceToHost));
      }
+     cudaFree(d_rx);
  
      // Final statistics
      matched = 0;
