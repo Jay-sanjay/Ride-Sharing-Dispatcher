@@ -140,8 +140,8 @@
                      int driver_id = grid_driver[base + k];
  
                      // Quick skip if already booked
-                     int idx = driver_id >> 5;
-                     int bit = driver_id & 31;
+                     int idx = driver_id >> 5; // equivalent to driver_id / 32 (integer division)
+                     int bit = driver_id & 31; // equivalent to driver_id % 32 (modulo)
                      if (driver_info[idx] & (1U << bit)) continue;
  
                      int dx_coord = rx - driver_x[driver_id];
@@ -234,25 +234,7 @@
      }
  }
  
- //------------------------------------------------------------------------------
- // Host function to compact failed rider indices
- //------------------------------------------------------------------------------
- int compact_failed(int *h_results, int *d_failed_indices, int num_riders) {
-     int *h_failed = (int*)malloc(num_riders * sizeof(int));
-     int count = 0;
-     for (int i = 0; i < num_riders; ++i) {
-         if (h_results[i] == -1) {
-             h_failed[count++] = i;
-         }
-     }
-     if (count > 0) {
-         CHECK(cudaMemcpy(d_failed_indices, h_failed, count * sizeof(int),
-                          cudaMemcpyHostToDevice));
-     }
-     free(h_failed);
-     return count;
- }
- 
+
  //------------------------------------------------------------------------------
  // Main
  //------------------------------------------------------------------------------
@@ -309,19 +291,16 @@
  
      // Step 1: Build spatial grid
      printf("Building spatial grid...\n");
-     spatial_grid_partitioning_kernel<<<driver_blocks, threads>>>(
-         d_dx, d_dy, d_grid_count, d_grid_driver);
+     spatial_grid_partitioning_kernel<<<driver_blocks, threads>>>(d_dx, d_dy, d_grid_count, d_grid_driver);
      CHECK(cudaDeviceSynchronize());
  
      // Step 2: Main matching with radius expansion
      printf("Running radius‑limited matching (MAX_RADIUS=%d)...\n", MAX_RADIUS);
-     ride_sharing_kernel<<<rider_blocks, threads>>>(
-         d_rx, d_ry, d_dx, d_dy, d_info, d_res, d_grid_count, d_grid_driver);
+     ride_sharing_kernel<<<rider_blocks, threads>>>(d_rx, d_ry, d_dx, d_dy, d_info, d_res, d_grid_count, d_grid_driver);
      CHECK(cudaDeviceSynchronize());
  
      // Copy results back to host
-     CHECK(cudaMemcpy(h_results, d_res, NUM_RIDERS * sizeof(int),
-                      cudaMemcpyDeviceToHost));
+     CHECK(cudaMemcpy(h_results, d_res, NUM_RIDERS * sizeof(int), cudaMemcpyDeviceToHost));
  
      // Count matches and compact failed riders
      int matched = 0;
@@ -340,17 +319,14 @@
          for (int i = 0; i < NUM_RIDERS; ++i) {
              if (h_results[i] == -1) h_failed[idx++] = i;
          }
-         CHECK(cudaMemcpy(d_failed_indices, h_failed, failed_count * sizeof(int),
-                          cudaMemcpyHostToDevice));
+         CHECK(cudaMemcpy(d_failed_indices, h_failed, failed_count * sizeof(int), cudaMemcpyHostToDevice));
          free(h_failed);
  
          int fallback_blocks = (failed_count + threads - 1) / threads;
-         fallback_global_kernel<<<fallback_blocks, threads>>>(
-             d_rx, d_ry, d_dx, d_dy, d_info, d_res, d_failed_indices, failed_count);
+         fallback_global_kernel<<<fallback_blocks, threads>>>(d_rx, d_ry, d_dx, d_dy, d_info, d_res, d_failed_indices, failed_count);
          CHECK(cudaDeviceSynchronize());
  
-         CHECK(cudaMemcpy(h_results, d_res, NUM_RIDERS * sizeof(int),
-                          cudaMemcpyDeviceToHost));
+         CHECK(cudaMemcpy(h_results, d_res, NUM_RIDERS * sizeof(int),cudaMemcpyDeviceToHost));
      }
  
      // Final statistics
