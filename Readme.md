@@ -2,7 +2,7 @@
 
 ## Overview
 This project implements a high‑performance, GPU‑accelerated simulation of a ride‑sharing dispatch system.  
-Given **10 million riders** and **10 million drivers** uniformly distributed in a 1000×1000 unit world, the goal is to assign each rider to the **nearest available driver** while guaranteeing **no double‑booking**.
+Given **1 million riders** and **10 million drivers** uniformly distributed in a 1000×1000 unit world, the goal is to assign each rider to the **nearest available driver** while guaranteeing **no double‑booking**.
 
 The solution evolves through five versions, each introducing key optimisations to reduce runtime and improve matching quality, culminating in a near‑linear time algorithm that runs in seconds on an NVIDIA RTX 3050.
 
